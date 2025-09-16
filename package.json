@@ -4,11 +4,10 @@
   "description": "ecommerce backend",
   "main": "server.ts",
   "scripts": {
-    "test": "npm start",
     "start": "ts-node src/server.ts",
     "dev": "nodemon --watch src --exec ts-node src/server.ts",
     "build": "tsc",
-    "serve": "node dist/index.js"
+    "serve": "node dist/server.js"
   },
   "author": "usanase",
   "license": "ISC",
