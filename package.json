@@ -4,9 +4,10 @@
   "description": "ecommerce backend",
   "main": "server.ts",
   "scripts": {
-  "dev": "nodemon --watch src --exec ts-node src/server.ts",
+  "dev": "nodemon  src/server.ts",
   "build": "tsc",
-  "start": "node dist/server.js"
+  "serve":" node dist/server.js",
+  "start": "st-node src/server.ts"
 }
 ,
   "author": "usanase",
