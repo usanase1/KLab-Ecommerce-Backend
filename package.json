@@ -4,16 +4,16 @@
   "description": "ecommerce backend",
   "main": "server.ts",
   "scripts": {
-  "dev": "nodemon  src/server.ts",
-  "build": "tsc",
-  "serve":" node dist/server.js",
-  "start": "st-node src/server.ts"
-}
-,
+    "dev": "nodemon  src/server.ts",
+    "build": "tsc",
+    "serve": " node dist/server.ts",
+    "start": "st-node src/server.ts"
+  },
   "author": "usanase",
   "license": "ISC",
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.3.1",
     "express": "^5.1.0",
     "nodemon": "^3.1.10",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
     "accepts": "^2.0.0",
@@ -33,10 +34,12 @@
     "bytes": "^3.1.2",
     "call-bind-apply-helpers": "^1.0.2",
     "call-bound": "^1.0.4",
+    "cloudinary": "^1.41.3",
     "content-disposition": "^1.0.0",
     "content-type": "^1.0.5",
     "cookie": "^0.7.2",
     "cookie-signature": "^1.2.2",
+    "cors": "^2.8.5",
     "create-require": "^1.1.1",
     "debug": "^4.4.1",
     "depd": "^2.0.0",
@@ -73,6 +76,8 @@
     "mime-types": "^3.0.1",
     "mongoose": "^8.18.1",
     "ms": "^2.1.3",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
     "negotiator": "^1.0.0",
     "object-inspect": "^1.13.4",
     "on-finished": "^2.4.1",

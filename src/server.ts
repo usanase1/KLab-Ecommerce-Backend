@@ -5,6 +5,8 @@ import dotenv from "dotenv"
 import mainRouter from "./routes/indexRouting";
 import bodyParser from "body-parser";
 import { connectDB } from "./config/databaseConfiguration";
+import cors from "cors";    
+import path from "path";
 dotenv.config();
 
 
@@ -19,13 +21,20 @@ const port = process.env.PORT || 4000;
 //app.get("/" , (req: Request , res: Response) =>{
    // res.send("Initial node js project")
 //});
-app.use(express.json());
+
 
 
 
 
 connectDB();
+app.use(express.json());
+ app.use(cors());
 app.use('/api-v1', mainRouter);
+app.use(
+  "/images",
+  express.static(path.join(__dirname, "../../images"))
+);
+
 
 app.listen(port , () => {
     console.log(`server is running:http://localhost:${port} `)

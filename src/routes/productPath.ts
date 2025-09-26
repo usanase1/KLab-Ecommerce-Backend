@@ -1,15 +1,16 @@
-import { createProduct , getProductById, getProducts, updateProduct, deleteProduct }  from "../controllers/productController";
- import express from "express";
+import { createProduct, getProductById, getProducts, updateProduct, deleteProduct } from "../controllers/productController";
+import express from "express";
+import { requireSignin, checkAdmin } from "../middlewares/authenticationFunctions";
+import upload from "../utils/multer";
 
- const productRouter = express.Router();
+const productRouter = express.Router();
 
- productRouter.post("/create", createProduct);
+// Use Multer middleware here for image upload
+productRouter.post("/create", requireSignin, checkAdmin, upload.single("image"), createProduct);
 
- productRouter.get("/", getProducts);
- productRouter.get("/", getProductById);
+productRouter.get("/getAllProducts", getProducts);
+productRouter.get("/get/:id", getProductById);
+productRouter.put("/edit/:id", updateProduct);
+productRouter.delete("/delete/:id", deleteProduct);
 
- productRouter.put("/:id", updateProduct)
-
- productRouter.delete("/:id", deleteProduct)
-
- export default productRouter
+export default productRouter;
