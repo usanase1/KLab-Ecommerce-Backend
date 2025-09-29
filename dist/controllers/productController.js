@@ -14,23 +14,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteProduct = exports.updateProduct = exports.getProductById = exports.getProducts = exports.createProduct = void 0;
 const productModels_1 = __importDefault(require("../models/productModels"));
+// Create Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, price, description, inStock } = req.body;
+        const { name, price, description, category, rating, isOnSale, originalPrice, badge, inStock, } = req.body;
+        const image = req.file ? `/images/${req.file.filename}` : null; // ✅ image path
         const newProduct = new productModels_1.default({
             name,
             price,
             description,
-            inStock
+            category,
+            image,
+            rating,
+            isOnSale,
+            originalPrice,
+            badge,
+            inStock,
         });
-        const savedProduct = newProduct.save();
-        res.status(201).json({ message: 'procuct created successfully', product: savedProduct });
+        const savedProduct = yield newProduct.save();
+        res.status(201).json({
+            message: "Product created successfully",
+            product: savedProduct,
+        });
     }
     catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
+        res.status(500).json({ message: "Server Error", error });
     }
 });
 exports.createProduct = createProduct;
+// Get All Products
 const getProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const products = yield productModels_1.default.find();
@@ -41,22 +53,36 @@ const getProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getProducts = getProducts;
+// Get Product by ID
 const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const product = yield productModels_1.default.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
+        res.status(200).json(product);
     }
     catch (error) {
         res.status(500).json({ message: "Server Error", error });
     }
 });
 exports.getProductById = getProductById;
+// Update Product
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, price, description, inStock } = req.body;
-        const updatedProduct = yield productModels_1.default.findByIdAndUpdate(req.params.id, { name, price, description, inStock }, { new: true, runValidators: true });
+        const { name, price, description, category, image, rating, isOnSale, originalPrice, badge, inStock, } = req.body;
+        const updatedProduct = yield productModels_1.default.findByIdAndUpdate(req.params.id, {
+            name,
+            price,
+            description,
+            category,
+            image,
+            rating,
+            isOnSale,
+            originalPrice,
+            badge,
+            inStock,
+        }, { new: true, runValidators: true });
         if (!updatedProduct) {
             return res.status(404).json({ message: "Product not found" });
         }
@@ -69,6 +95,7 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateProduct = updateProduct;
+// Delete Product
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const deletedProduct = yield productModels_1.default.findByIdAndDelete(req.params.id);

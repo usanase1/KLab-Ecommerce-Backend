@@ -20,11 +20,11 @@ const JWT_SECRET = (_a = process.env.JWT_SECRET) !== null && _a !== void 0 ? _a 
 const requireSignin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (req.headers.authorization) {
-            const token = req.headers.authorization;
+            const token = req.headers.authorization.split(" ")[1];
             const verifytoken = jsonwebtoken_1.default.verify(token, JWT_SECRET);
             const rootuser = yield userModel_1.User.findOne({
                 _id: verifytoken._id,
-                "tokens.token": token,
+                accessToken: token,
             });
             if (!rootuser) {
                 throw "User not found";
@@ -43,8 +43,9 @@ const requireSignin = (req, res, next) => __awaiter(void 0, void 0, void 0, func
 exports.requireSignin = requireSignin;
 const checkAdmin = (req, res, next) => {
     var _a;
-    if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.userRole) !== 'admin')
-        return res.status(401).json({ message: "User is not authorized" });
+    if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.userRole) !== "admin") {
+        return res.status(401).json({ message: "User not Authorized" });
+    }
     next();
 };
 exports.checkAdmin = checkAdmin;
