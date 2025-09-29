@@ -7,7 +7,7 @@
     "dev": "nodemon  src/server.ts",
     "build": "tsc",
     "serve": " node dist/server.ts",
-    "start": "st-node src/server.ts"
+    "start": "node dist/server.js"
   },
   "author": "usanase",
   "license": "ISC",
