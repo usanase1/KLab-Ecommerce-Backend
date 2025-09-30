@@ -2,6 +2,8 @@ import {User} from "../models/userModel";
 import {NextFunction, Request, Response} from 'express';
 import { generateAccessToken } from "../utils/tokenGeneration";
 import bcryptjs from 'bcryptjs';
+import crypto from 'crypto';
+import mailerSender from "../utils/sendEmail";
 
 export const signin = async (req: Request ,  res: Response, next: NextFunction) =>
 {
@@ -16,10 +18,25 @@ export const signin = async (req: Request ,  res: Response, next: NextFunction) 
         const hashedPassword = await bcryptjs.hash(password, 10);
 
         const newUser =  new User ({fullname, email, password:hashedPassword, userRole});
+        
+        // generate email verification code (6 digits) and store its hash + expiry (15 min)
+        const rawCode = (Math.floor(100000 + Math.random() * 900000)).toString();
+        const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+        newUser.verificationCode = codeHash;
+        newUser.verificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+        newUser.emailVerified = false;
+        
         const token = generateAccessToken(newUser);
         newUser.accessToken = token;
         await newUser.save();
-        return res.status(201).json({message: "User created successfully", newUser})
+        
+        // send verification email
+        const html = `<p>Welcome, ${fullname}!</p>
+                      <p>Your verification code is: <strong>${rawCode}</strong></p>
+                      <p>This code will expire in 15 minutes.</p>`;
+        await mailerSender(email, 'Verify your email', html);
+
+        return res.status(201).json({message: "User created successfully. Please verify your email.", newUser:{ fullname, email }});
 
     }
     catch(error){
@@ -34,6 +51,9 @@ export const login=async(req:Request,res:Response,next:NextFunction)=>{
     if(!existingUser){
       return res.status(400).json({message:"User not found,please register"});
     }         
+    if (!existingUser.emailVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in" });
+    }
     const isPasswordMatched=await bcryptjs.compare(password,existingUser.password);
     if(!isPasswordMatched){
       return res.status(400).json({message:"Invalid credentials"});
@@ -59,7 +79,7 @@ export const getAllUsers=async(req:Request,res:Response,next:NextFunction)=>{
 
   export const logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const token = req.headers.authorization?.split("")[1];
+        const token = req.headers.authorization?.split(" ")[1];
         if (!token) {
             return res.status(400).json({message: "No token provided"});
         }
@@ -77,3 +97,116 @@ export const getAllUsers=async(req:Request,res:Response,next:NextFunction)=>{
         return res.status(500).json({message: "Error in logout", error})
     }
   }
+
+// Request password reset: generate token, store hashed token and expiry, send email
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // For security, respond success even if user not found
+      return res.status(200).json({ message: "If an account exists, a reset email has been sent" });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.passwordResetToken = tokenHash;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    const html = `<p>You requested a password reset.</p>
+                  <p>Click the link below to reset your password (valid for 1 hour):</p>
+                  <p><a href="${resetUrl}">${resetUrl}</a></p>`;
+    await mailerSender(email, 'Password Reset', html);
+
+    return res.status(200).json({ message: 'If an account exists, a reset email has been sent' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error sending reset email', error });
+  }
+}
+
+// Reset password using token
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, email, newPassword } = req.body;
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({ message: 'token, email and newPassword are required' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      email,
+      passwordResetToken: tokenHash,
+      passwordResetExpires: { $gt: new Date() }
+    });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    user.password = await bcryptjs.hash(newPassword, 10);
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    // Optional: revoke existing sessions
+    user.accessToken = '';
+    await user.save();
+
+    return res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error resetting password', error });
+  }
+}
+
+// Verify email with code
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ message: 'email and code are required' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'Invalid request' });
+    if (user.emailVerified) return res.status(200).json({ message: 'Email already verified' });
+
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    if (user.verificationCode !== codeHash || !user.verificationExpires || user.verificationExpires <= new Date()) {
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    user.emailVerified = true;
+    user.verificationCode = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ message: 'Email verified successfully' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error verifying email', error });
+  }
+}
+
+// Resend verification code
+export const resendVerification = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'email is required' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(200).json({ message: 'If an account exists, a verification email has been sent' });
+    if (user.emailVerified) return res.status(200).json({ message: 'Email already verified' });
+
+    const rawCode = (Math.floor(100000 + Math.random() * 900000)).toString();
+    const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+    user.verificationCode = codeHash;
+    user.verificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    const html = `<p>Your new verification code is: <strong>${rawCode}</strong></p>
+                  <p>This code will expire in 15 minutes.</p>`;
+    await mailerSender(email, 'Verify your email', html);
+
+    return res.status(200).json({ message: 'If an account exists, a verification email has been sent' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error resending code', error });
+  }
+}
