@@ -2,9 +2,9 @@ import express from "express";
 import {Request, Response} from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv"
-import mainRouter from "./routes/indexRouting";
+import mainRouter from "./src/routes/indexRouting";
 import bodyParser from "body-parser";
-import { connectDB } from "./config/databaseConfiguration";
+import { connectDB } from "./src/config/databaseConfiguration";
 import cors from "cors";    
 import path from "path";
 dotenv.config();
